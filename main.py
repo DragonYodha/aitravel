@@ -1,5 +1,12 @@
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain import LLMChain
+from langchain import PromptTemplate
+
 import streamlit as st
-import ollama
+import os
+
+# Access API key from Streamlit secrets
+os.environ['GOOGLE_API_KEY'] = st.secrets["GOOGLE_API_KEY"]
 
 # Set page configuration
 st.set_page_config(page_title="Travel Itinerary Generator", layout="wide")
@@ -13,22 +20,25 @@ st.sidebar.info(
     "_Plan your perfect trip effortlessly!_"
 )
 
-# Function to generate itinerary
 def generate_itinerary(location, days, month):
-    messages = [
-        {"role": "system", "content": "You are a kind and helpful travel assistant."},
-        {"role": "user", "content": f"Generate a {days}-day travel itinerary for {location} in {month}."},
-        {"role": "user", "content": "Include morning, afternoon, and evening sightseeing activity suggestions with food options."},
-        {"role": "user", "content": """Ensure popular and offbeat spots are covered with specific timings."""}
-    ]
+    prompt = f"""You are a kind and helpful travel assistant.
+
+    Generate a {days}-day travel itinerary for {location} in {month}.
+
+    Include morning, afternoon, and evening sightseeing activity suggestions with food options.
+
+    Ensure popular and offbeat spots are covered with specific timings.  Be specific about times, e.g., "9:00 AM: Visit the Eiffel Tower..."
+    """
+
     try:
-        response = ollama.chat(model="llama2:7b", messages=messages)  
-        return response["message"]["content"]
+        llm = ChatGoogleGenerativeAI(model="gemini-pro")  # Or another suitable Gemini model
+        chain = LLMChain(llm=llm, prompt=PromptTemplate.from_template(prompt))
+        response = chain.run()
+        return response
     except Exception as e:
-        st.error(f"Error generating itinerary: {e}")
+        st.error(f"Error generating itinerary: {e}")  # More informative error message
         return "⚠️ Unable to generate itinerary. Please try again."
 
-# Main application logic
 def main():
     st.title("🌍 Travel Itinerary Generator ✈️")
     st.subheader("AI Planner for Travel Itinerary!")
@@ -53,9 +63,6 @@ def main():
                     st.markdown(itinerary)  # Display the itinerary
                 else:
                     st.error(itinerary)
-        else:
-            st.warning("⚠️ Please enter a valid location.")
 
-# Run the app
 if __name__ == "__main__":
     main()
